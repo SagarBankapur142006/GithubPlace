@@ -351,12 +351,13 @@ async def dev_confirm_checkout(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Dev-only: simulate successful payment when Stripe is not configured."""
+    """Dev-only: simulate successful payment when Razorpay is not configured."""
     from app.config import get_settings
     from app.services.checkout import fulfill_transaction
 
-    if get_settings().stripe_secret_key:
-        raise HTTPException(status_code=404, detail="Not available")
+    settings = get_settings()
+    if settings.razorpay_key_id and settings.razorpay_key_secret:
+        raise HTTPException(status_code=404, detail="Not available when Razorpay is active")
 
     result = await db.execute(
         select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user.id)

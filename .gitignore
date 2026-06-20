@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.env
+.venv/
+fulfillment_packages/
+ideora.db
+
+# Node
+node_modules/
+.next/
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databases & Large Binaries
+*.db
+postgresql.zip
+pgsql/

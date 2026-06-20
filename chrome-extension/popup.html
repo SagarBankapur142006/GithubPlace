@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-area">
+      <span class="logo-text">Ideora.</span>
+      <span class="badge">AI Valuator</span>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs">
+    <div class="tab active" id="tab-url">GitHub Repo</div>
+    <div class="tab" id="tab-text">Paste README</div>
+  </div>
+
+  <!-- Main Content Form -->
+  <div class="content">
+    <div class="input-section" id="section-url">
+      <label class="field-label">GitHub URL</label>
+      <input type="url" id="github-url" placeholder="https://github.com/owner/repo" class="input-field" value="https://github.com/Significant-Gravitas/AutoGPT">
+    </div>
+
+    <div class="input-section hidden" id="section-text">
+      <label class="field-label">README.md Text</label>
+      <textarea id="readme-text" placeholder="Paste repository README content here..." rows="6" class="input-field monospace"></textarea>
+    </div>
+
+    <div class="input-section">
+      <label class="field-label">Specialized Domain</label>
+      <select id="domain-select" class="input-field dropdown">
+        <option value="general">General Software</option>
+        <option value="saas">B2B SaaS / Subscriptions</option>
+        <option value="fintech">Fintech & Payments</option>
+        <option value="data_analytics">Data Analytics & BI</option>
+      </select>
+    </div>
+
+    <button id="btn-evaluate" class="btn-primary">✨ Valuate Project</button>
+  </div>
+
+  <!-- Loader Area -->
+  <div id="loader" class="loader-container hidden">
+    <div class="spinner"></div>
+    <div class="loader-title" id="loader-status">Reading GitHub Repository...</div>
+    <div class="loader-subtitle">Evaluating codebase assets using Gemini AI</div>
+  </div>
+
+  <!-- Error Area -->
+  <div id="error-container" class="error-container hidden">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="error-icon">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <div id="error-message">Connection failed. Please make sure the backend server is running.</div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="results" class="results-container hidden">
+    <div class="project-info">
+      <h3 id="result-title">Project Name</h3>
+      <p id="result-desc">Short description of project</p>
+    </div>
+
+    <div class="grid-stats">
+      <div class="stat-card">
+        <span class="stat-label">Estimated Valuation</span>
+        <span class="stat-value gold" id="result-val">$18,500</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Growth Potential</span>
+        <span class="stat-value" id="result-score">82/100</span>
+      </div>
+    </div>
+
+    <div class="results-box">
+      <div class="section-detail">
+        <span class="detail-label">Tech Stack</span>
+        <div class="tech-container" id="result-tech">
+          <span class="tech-pill">React</span>
+          <span class="tech-pill">Node.js</span>
+        </div>
+      </div>
+      <div class="section-detail">
+        <span class="detail-label">Target Audience</span>
+        <p id="result-audience" class="detail-text">Developers and engineers.</p>
+      </div>
+    </div>
+
+    <div class="verdict-container">
+      <span class="verdict-label">Expert Analyst Verdict</span>
+      <div class="verdict-text" id="result-verdict">Expert analysis output goes here...</div>
+    </div>
+
+    <div class="footer-actions">
+      <button id="btn-list" class="btn-primary w-100">✨ List Codebase on Ideora</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

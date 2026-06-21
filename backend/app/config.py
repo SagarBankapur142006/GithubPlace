@@ -12,6 +12,8 @@ class Settings(BaseSettings):
 
     github_token: str = ""
     github_api_base: str = "https://api.github.com"
+    github_client_id: str = ""
+    github_client_secret: str = ""
 
     ai_provider: str = "openai"  # openai | gemini
     openai_api_key: str = ""

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments } from "../../lib/api";
+import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments, getMe } from "../../lib/api";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [myListings, setMyListings] = useState<any[]>([]);
   const [deployments, setDeployments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -24,12 +25,31 @@ export default function DashboardPage() {
   const [publishingRepo, setPublishingRepo] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getPurchases(), getSales(), getMyListings(), getDeployments()])
-      .then(([p, s, ml, d]) => {
+    Promise.all([getMe(), getPurchases(), getSales(), getMyListings(), getDeployments()])
+      .then(([me, p, s, ml, d]) => {
+        setUser(me);
         setPurchases(p);
         setSales(s);
         setMyListings(ml);
         setDeployments(d);
+
+        // Auto-fetch repositories if logged-in user has linked github account
+        if (me?.github_username) {
+          setGithubUsername(me.github_username);
+          setFetchingRepos(true);
+          fetchGithubRepos()
+            .then((repos) => {
+              if (Array.isArray(repos)) {
+                setGithubRepos(repos);
+              }
+            })
+            .catch((err) => {
+              console.error("Auto-fetching repositories failed:", err);
+            })
+            .finally(() => {
+              setFetchingRepos(false);
+            });
+        }
       })
       .finally(() => setLoading(false));
   }, []);

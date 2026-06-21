@@ -35,6 +35,7 @@ export interface User {
   id: string;
   email: string;
   full_name: string | null;
+  github_username?: string | null;
 }
 
 // On the server (SSR) we need the full URL to hit the backend directly.
@@ -224,8 +225,18 @@ export async function resolveBounty(id: string) {
   });
 }
 
-export async function fetchGithubRepos(username: string) {
-  return apiFetch<any[]>(`/api/github/repos?username=${encodeURIComponent(username)}`);
+export async function fetchGithubRepos(username?: string) {
+  const url = username 
+    ? `/api/github/repos?username=${encodeURIComponent(username)}` 
+    : `/api/github/repos`;
+  return apiFetch<any[]>(url);
+}
+
+export async function signInWithGithub(code: string, redirectUri: string) {
+  return apiFetch<any>("/api/auth/github", {
+    method: "POST",
+    body: JSON.stringify({ code, redirect_uri: redirectUri }),
+  });
 }
 
 export async function detectFramework(repoUrl: string) {

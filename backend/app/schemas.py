@@ -23,9 +23,15 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str | None
+    github_username: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class GithubAuthRequest(BaseModel):
+    code: str
+    redirect_uri: str
 
 
 class ListingSummary(BaseModel):

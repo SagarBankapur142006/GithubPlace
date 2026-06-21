@@ -32,5 +32,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Migrate postgres schema dynamically if running in postgres mode
+        if not settings.database_url.startswith("sqlite"):
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id VARCHAR(255);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS github_username VARCHAR(255);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS github_token VARCHAR(255);"))
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;"))

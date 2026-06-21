@@ -189,6 +189,14 @@ docker compose up --build -d
             KeyName=key_name,
             SecurityGroupIds=[sg_id],
             UserData=user_data,
+            BlockDeviceMappings=[{
+                'DeviceName': '/dev/sda1',
+                'Ebs': {
+                    'VolumeSize': 20,
+                    'VolumeType': 'gp3',
+                    'DeleteOnTermination': True
+                }
+            }],
             TagSpecifications=[{
                 'ResourceType': 'instance',
                 'Tags': [{'Key': 'Name', 'Value': 'Ideora-Marketplace'}]

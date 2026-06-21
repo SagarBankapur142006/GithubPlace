@@ -12,13 +12,24 @@ function CallbackHandler() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if GitHub returned an error (e.g. user denied access)
+    const ghError = searchParams.get("error");
+    const ghErrorDesc = searchParams.get("error_description");
+    if (ghError) {
+      setError(ghErrorDesc || `GitHub authorization failed: ${ghError}`);
+      return;
+    }
+
     const code = searchParams.get("code");
     if (!code) {
       setError("No authorization code returned from GitHub.");
       return;
     }
 
+    // Build the same redirect URI that was used to initiate the flow
     const redirectUri = `${window.location.protocol}//${window.location.host}/auth/github/callback`;
+
+    console.log("[GitHub OAuth] Exchanging code for session...", { redirectUri });
 
     signInWithGithub(code, redirectUri)
       .then(() => {
@@ -26,7 +37,8 @@ function CallbackHandler() {
       })
       .catch((err) => {
         console.error("GitHub Login Error:", err);
-        setError(err instanceof Error ? err.message : "GitHub authentication failed.");
+        const msg = err instanceof Error ? err.message : "GitHub authentication failed.";
+        setError(msg);
       });
   }, [searchParams, router]);
 

@@ -93,19 +93,27 @@ async def signin(body: SignInRequest, response: Response, db: AsyncSession = Dep
 
 @router.post("/auth/github", response_model=UserResponse)
 async def github_auth(body: GithubAuthRequest, response: Response, db: AsyncSession = Depends(get_db)):
-    from app.config import get_settings
     import httpx
+    import logging
+    logger = logging.getLogger("ideora.auth.github")
+
     settings = get_settings()
 
     if not settings.github_client_id or not settings.github_client_secret:
         raise HTTPException(
             status_code=500,
-            detail="GitHub OAuth is not configured on the server. Please check environment variables."
+            detail="GitHub OAuth is not configured on the server."
         )
 
+    access_token = None
+    github_id = None
+    github_username = None
+    full_name = None
+    email = None
+
     # 1. Exchange authorization code for access token
-    async with httpx.AsyncClient() as client:
-        try:
+    try:
+        async with httpx.AsyncClient() as client:
             token_resp = await client.post(
                 "https://github.com/login/oauth/access_token",
                 headers={"Accept": "application/json"},
@@ -115,15 +123,15 @@ async def github_auth(body: GithubAuthRequest, response: Response, db: AsyncSess
                     "code": body.code,
                     "redirect_uri": body.redirect_uri
                 },
-                timeout=10.0
+                timeout=15.0
             )
-            if token_resp.status_code != 200:
-                raise HTTPException(status_code=400, detail="Failed to exchange OAuth code with GitHub")
-            
+            logger.info(f"GitHub token exchange status: {token_resp.status_code}")
             token_data = token_resp.json()
+            logger.info(f"GitHub token response keys: {list(token_data.keys())}")
+
             access_token = token_data.get("access_token")
             if not access_token:
-                error_desc = token_data.get("error_description", "Invalid code or configuration")
+                error_desc = token_data.get("error_description") or token_data.get("error", "Invalid or expired authorization code")
                 raise HTTPException(status_code=400, detail=f"GitHub OAuth error: {error_desc}")
 
             # 2. Fetch User Profile
@@ -138,14 +146,14 @@ async def github_auth(body: GithubAuthRequest, response: Response, db: AsyncSess
             )
             if profile_resp.status_code != 200:
                 raise HTTPException(status_code=400, detail="Failed to fetch user profile from GitHub")
-            
+
             profile = profile_resp.json()
             github_id = str(profile.get("id"))
             github_username = profile.get("login")
             full_name = profile.get("name") or github_username
-
-            # 3. Retrieve Email (if private)
             email = profile.get("email")
+
+            # 3. Retrieve Email if private
             if not email:
                 emails_resp = await client.get(
                     "https://api.github.com/user/emails",
@@ -157,51 +165,67 @@ async def github_auth(body: GithubAuthRequest, response: Response, db: AsyncSess
                     timeout=10.0
                 )
                 if emails_resp.status_code == 200:
-                    for e in emails_resp.json():
+                    email_list = emails_resp.json()
+                    # First try primary+verified
+                    for e in email_list:
                         if e.get("primary") and e.get("verified"):
                             email = e.get("email")
                             break
-                        if not email:
-                            email = e.get("email")
-            
+                    # Fallback to any email
+                    if not email and email_list:
+                        email = email_list[0].get("email")
+
             if not email:
                 email = f"{github_username.lower()}@users.noreply.github.com"
 
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"GitHub integration is temporarily unavailable: {exc}")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except httpx.RequestError as exc:
+        logger.error(f"GitHub API request failed: {exc}")
+        raise HTTPException(status_code=503, detail=f"GitHub is temporarily unreachable: {exc}")
+    except Exception as exc:
+        logger.error(f"Unexpected error in GitHub OAuth token exchange: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"OAuth exchange failed: {str(exc)}")
 
-    # 4. Check if user already exists
-    result = await db.execute(select(User).where(User.github_id == github_id))
-    user = result.scalar_one_or_none()
-
-    if not user:
-        result = await db.execute(select(User).where(User.email == email.lower()))
+    # 4. Find or create user in DB
+    try:
+        result = await db.execute(select(User).where(User.github_id == github_id))
         user = result.scalar_one_or_none()
 
-    if user:
-        # Update existing user info
-        user.github_id = github_id
-        user.github_username = github_username
-        user.github_token = access_token
-        if not user.full_name:
-            user.full_name = full_name
-    else:
-        # Create new user
-        user = User(
-            email=email.lower(),
-            password_hash=None,
-            full_name=full_name,
-            github_id=github_id,
-            github_username=github_username,
-            github_token=access_token
-        )
-        db.add(user)
+        if not user:
+            result = await db.execute(select(User).where(User.email == email.lower()))
+            user = result.scalar_one_or_none()
 
-    await db.flush()
-    token = create_access_token(user.id)
-    set_auth_cookie(response, token)
-    await db.commit()
-    return user
+        if user:
+            user.github_id = github_id
+            user.github_username = github_username
+            user.github_token = access_token
+            if not user.full_name:
+                user.full_name = full_name
+        else:
+            user = User(
+                email=email.lower(),
+                password_hash=None,
+                full_name=full_name,
+                github_id=github_id,
+                github_username=github_username,
+                github_token=access_token
+            )
+            db.add(user)
+
+        await db.flush()
+        token = create_access_token(user.id)
+        set_auth_cookie(response, token)
+        await db.commit()
+        logger.info(f"GitHub OAuth login success for user: {github_username}")
+        return user
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await db.rollback()
+        logger.error(f"Database error during GitHub OAuth login: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create user session: {str(exc)}")
 
 
 @router.post("/auth/signout")

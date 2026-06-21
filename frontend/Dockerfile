@@ -1,5 +1,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Accept BACKEND_URL as build arg so next.config.ts rewrites() can use it at build time
+ARG BACKEND_URL=http://api:8000
+ENV BACKEND_URL=${BACKEND_URL}
 COPY package*.json ./
 RUN npm ci
 COPY . .

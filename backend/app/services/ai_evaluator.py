@@ -288,3 +288,104 @@ def _parse_json(text: str) -> dict:
     except Exception as exc:
         logger.error("Failed to parse AI JSON: %s\nText: %s", exc, text)
         return {}
+
+
+async def generate_saasify_preview(readme_text: str, app_name: str) -> dict:
+    settings = get_settings()
+    prompt = f"""
+You are a senior frontend UI/UX designer. Your task is to generate a custom UI layout specification (JSON format) to build a mock "Live Preview Dashboard" for a SaaS application named "{app_name}".
+This dashboard should represent what the app would look like if it were deployed.
+
+Use the README text below to understand the application's core functionality, features, target users, and key data indicators:
+---
+{readme_text[:4000]}
+---
+
+Produce a JSON object containing the layout configuration for this dashboard.
+Use exactly this JSON format (do not add any extra fields, respond with only the JSON):
+{{
+  "dashboard_title": "e.g., Auth0 - Identity Management Console",
+  "navigation_links": ["e.g., Users", "e.g., Applications", "e.g., Connections", "e.g., Settings"],
+  "stats": [
+    {{ "label": "Active Users", "value": "12,480", "change": "+12.3% this week" }},
+    {{ "label": "API Requests", "value": "1.2M", "change": "99.9% uptime" }}
+  ],
+  "charts": [
+    {{ "title": "Monthly Growth", "type": "bar", "labels": ["Jan", "Feb", "Mar", "Apr"], "data": [30, 45, 60, 85] }}
+  ],
+  "recent_activity": [
+    {{ "timestamp": "2 mins ago", "description": "New tenant registered: Acme Corp" }},
+    {{ "timestamp": "15 mins ago", "description": "SSL Certificate renewed automatically" }}
+  ],
+  "interactive_demo_widget": {{
+    "title": "Try out the live API",
+    "inputs": [
+      {{ "label": "API Key", "placeholder": "Enter key...", "type": "text" }},
+      {{ "label": "Payload", "placeholder": "{{\\"user\\": \\"test\\"}}", "type": "textarea" }}
+    ],
+    "button_text": "Send Request",
+    "simulated_output_format": "JSON",
+    "simulated_success_output": "{{\\"status\\": \\"success\\", \\"data\\": {{\\"id\\": 123, \\"processed\\": true}}}}"
+  }}
+}}
+
+Respond with ONLY the raw JSON object. No markdown. No explanation.
+"""
+
+    if settings.ai_provider == "gemini" and settings.gemini_api_key:
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(settings.gemini_model)
+        try:
+            try:
+                response = await model.generate_content_async(prompt)
+                text = response.text
+            except AttributeError:
+                response = model.generate_content(prompt)
+                text = response.text
+            return _parse_json(text)
+        except Exception as e:
+            logger.error("Gemini SaaSify preview generation failed: %s", e)
+            return _fallback_saasify_data(app_name)
+    elif settings.openai_api_key:
+        try:
+            client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+            response = await client.chat.completions.create(
+                model=settings.openai_model,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            text = response.choices[0].message.content
+            return _parse_json(text)
+        except Exception as e:
+            logger.error("OpenAI SaaSify preview generation failed: %s", e)
+            return _fallback_saasify_data(app_name)
+    else:
+        return _fallback_saasify_data(app_name)
+
+
+def _fallback_saasify_data(app_name: str) -> dict:
+    return {
+        "dashboard_title": f"{app_name} Dashboard",
+        "navigation_links": ["Overview", "Deployments", "Logs", "Settings"],
+        "stats": [
+            { "label": "Requests (24h)", "value": "4,180", "change": "+5.2%" },
+            { "label": "Average Latency", "value": "120ms", "change": "Uptime 100%" }
+        ],
+        "charts": [
+            { "title": "API Traffic", "type": "line", "labels": ["Mon", "Tue", "Wed", "Thu", "Fri"], "data": [400, 520, 390, 610, 800] }
+        ],
+        "recent_activity": [
+            { "timestamp": "Just now", "description": "SaaS application successfully deployed" },
+            { "timestamp": "5 mins ago", "description": "Database connection verified" }
+        ],
+        "interactive_demo_widget": {
+            "title": "Interactive API Console",
+            "inputs": [
+                { "label": "API Key", "placeholder": "ideora_live_key_...", "type": "text" },
+                { "label": "Endpoint", "placeholder": "/api/v1/hello", "type": "text" }
+            ],
+            "button_text": "Test Endpoint",
+            "simulated_output_format": "JSON",
+            "simulated_success_output": '{"ok": true, "message": "Welcome to your SaaSify deployed API!"}'
+        }
+    }

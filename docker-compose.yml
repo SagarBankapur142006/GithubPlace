@@ -18,6 +18,10 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      - USE_SQLITE=false
+      - DATABASE_URL=postgresql+asyncpg://ideora:ideora@postgres:5432/ideora
+      - SYNC_DATABASE_URL=postgresql://ideora:ideora@postgres:5432/ideora
     depends_on:
       - postgres
     volumes:
@@ -31,10 +35,25 @@ services:
     command: python -m worker.scheduler
     env_file:
       - ./backend/.env
+    environment:
+      - USE_SQLITE=false
+      - DATABASE_URL=postgresql+asyncpg://ideora:ideora@postgres:5432/ideora
+      - SYNC_DATABASE_URL=postgresql://ideora:ideora@postgres:5432/ideora
     depends_on:
       - postgres
     volumes:
       - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"
+    environment:
+      - BACKEND_URL=http://api:8000
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

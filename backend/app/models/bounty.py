@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func, ForeignKey
+from sqlalchemy import DateTime, Integer, String, Text, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,5 +16,13 @@ class Bounty(Base):
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open") # open, locked, resolved
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Metadata Cache Columns
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    repo_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comments_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     funder: Mapped["User"] = relationship("User", backref="funded_bounties")

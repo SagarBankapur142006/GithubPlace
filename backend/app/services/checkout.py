@@ -113,6 +113,7 @@ async def verify_razorpay_payment(db: AsyncSession, order_id: str, payment_id: s
 
     transaction.status = "succeeded"
     transaction.escrow_status = "held"
+    transaction.fulfillment_status = "delivered"
     transaction.razorpay_payment_id = payment_id
     if transaction.listing:
         transaction.listing.status = "sold"
@@ -144,6 +145,7 @@ async def handle_razorpay_webhook(db: AsyncSession, payload: dict) -> None:
 
         transaction.status = "succeeded"
         transaction.escrow_status = "held"
+        transaction.fulfillment_status = "delivered"
         transaction.razorpay_payment_id = payment_id
         if transaction.listing:
             transaction.listing.status = "sold"

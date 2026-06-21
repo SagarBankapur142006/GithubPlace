@@ -292,27 +292,13 @@ async def get_transaction(
     listing_result = await db.execute(select(Listing).where(Listing.id == transaction.listing_id))
     listing = listing_result.scalar_one_or_none()
 
-    from app.models.fulfillment import FulfillmentAsset
-
-    assets_result = await db.execute(
-        select(FulfillmentAsset).where(FulfillmentAsset.transaction_id == transaction.id)
-    )
-    assets = assets_result.scalars().all()
-
     return TransactionResponse(
         id=transaction.id,
         status=transaction.status,
         fulfillment_status=transaction.fulfillment_status,
         amount_cents=transaction.amount_cents,
         listing=ListingSummary.model_validate(listing) if listing else None,
-        fulfillment_assets=[
-            {
-                "delivery_method": a.delivery_method,
-                "delivery_url_or_reference": a.delivery_url_or_reference,
-                "expires_at": a.expires_at.isoformat() if a.expires_at else None,
-            }
-            for a in assets
-        ],
+        fulfillment_assets=[],
     )
 
 
@@ -322,27 +308,10 @@ async def download_fulfillment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user.id)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Direct package downloads are disabled. Access your codebase via the seller repository link in your dashboard."
     )
-    transaction = result.scalar_one_or_none()
-    if not transaction or transaction.fulfillment_status != "delivered":
-        raise HTTPException(status_code=404, detail="Package not available")
-
-    from app.models.fulfillment import FulfillmentAsset
-
-    assets_result = await db.execute(
-        select(FulfillmentAsset).where(FulfillmentAsset.transaction_id == transaction.id)
-    )
-    asset = assets_result.scalar_one_or_none()
-    if not asset:
-        raise HTTPException(status_code=404, detail="No fulfillment asset")
-
-    path = Path(asset.delivery_url_or_reference)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Package file missing")
-
-    return FileResponse(path, filename=f"ideora-acquisition-{transaction_id}.zip", media_type="application/zip")
 
 
 @router.post("/checkout/dev-confirm/{transaction_id}")
@@ -353,7 +322,6 @@ async def dev_confirm_checkout(
 ):
     """Dev-only: simulate successful payment when Razorpay is not configured."""
     from app.config import get_settings
-    from app.services.checkout import fulfill_transaction
 
     settings = get_settings()
     if settings.razorpay_key_id and settings.razorpay_key_secret:
@@ -368,12 +336,13 @@ async def dev_confirm_checkout(
 
     if transaction.status != "succeeded":
         transaction.status = "succeeded"
+        transaction.fulfillment_status = "delivered"
+        transaction.escrow_status = "held"
         listing_result = await db.execute(select(Listing).where(Listing.id == transaction.listing_id))
         listing = listing_result.scalar_one_or_none()
         if listing:
             listing.status = "sold"
         await db.flush()
-        await fulfill_transaction(db, transaction)
 
     await db.commit()
     return {"ok": True}
@@ -521,22 +490,84 @@ async def get_my_listings(user: User = Depends(get_current_user), db: AsyncSessi
     return result.scalars().all()
 
 
+async def fetch_github_api(url: str, settings) -> dict | None:
+    import httpx
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if settings.github_token:
+        headers["Authorization"] = f"Bearer {settings.github_token}"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code == 200:
+                return resp.json()
+        except Exception:
+            pass
+    return None
+
+
 class CreateBountyRequest(BaseModel):
     github_issue_url: str
     amount_cents: int
+    custom_instructions: str | None = None
+
+
+class ResolveBountyPRRequest(BaseModel):
+    pr_url: str
+
+
+class CreateDeploymentRequest(BaseModel):
+    repo_url: str
+    subdomain: str
+    pricing_tier: str
+    app_name: str
+
 
 @router.post("/bounties")
 async def create_bounty(body: CreateBountyRequest, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from app.models.bounty import Bounty
+    from app.config import get_settings
+    import re
+    
+    settings = get_settings()
+    
+    # Fetch issue details for cache
+    title = None
+    repo_name = None
+    avatar_url = None
+    description = None
+    comments_count = 0
+    
+    issue_match = re.match(r"https://github\.com/([^/]+)/([^/]+)/issues/(\d+)", body.github_issue_url)
+    num = ""
+    if issue_match:
+        owner, repo, num = issue_match.groups()
+        repo_name = f"{owner}/{repo}"
+        issue_data = await fetch_github_api(f"https://api.github.com/repos/{owner}/{repo}/issues/{num}", settings)
+        if issue_data:
+            title = issue_data.get("title")
+            description = issue_data.get("body")
+            comments_count = issue_data.get("comments", 0)
+            avatar_url = issue_data.get("user", {}).get("avatar_url")
+            
     bounty = Bounty(
         funder_id=user.id,
         github_issue_url=body.github_issue_url,
         amount_cents=body.amount_cents,
-        status="open"
+        status="open",
+        title=title or f"Issue #{num if issue_match else ''}",
+        repo_name=repo_name or "Unknown Repo",
+        avatar_url=avatar_url,
+        description=description,
+        comments_count=comments_count,
+        custom_instructions=body.custom_instructions
     )
     db.add(bounty)
     await db.commit()
     return {"ok": True, "bounty_id": str(bounty.id)}
+
 
 @router.get("/bounties")
 async def list_bounties(db: AsyncSession = Depends(get_db)):
@@ -548,8 +579,15 @@ async def list_bounties(db: AsyncSession = Depends(get_db)):
         "funder_id": str(b.funder_id),
         "github_issue_url": b.github_issue_url,
         "amount_cents": b.amount_cents,
-        "status": b.status
+        "status": b.status,
+        "title": b.title,
+        "repo_name": b.repo_name,
+        "avatar_url": b.avatar_url,
+        "description": b.description,
+        "comments_count": b.comments_count,
+        "custom_instructions": b.custom_instructions
     } for b in bounties]
+
 
 @router.post("/bounties/{bounty_id}/resolve")
 async def resolve_bounty(bounty_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
@@ -561,6 +599,176 @@ async def resolve_bounty(bounty_id: uuid.UUID, db: AsyncSession = Depends(get_db
     bounty.status = "resolved"
     await db.commit()
     return {"ok": True}
+
+
+@router.post("/bounties/{bounty_id}/resolve-pr")
+async def resolve_bounty_pr(
+    bounty_id: uuid.UUID,
+    body: ResolveBountyPRRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.bounty import Bounty
+    from app.config import get_settings
+    import re
+    
+    result = await db.execute(select(Bounty).where(Bounty.id == bounty_id))
+    bounty = result.scalar_one_or_none()
+    if not bounty:
+        raise HTTPException(status_code=404, detail="Bounty not found")
+        
+    if bounty.status == "resolved":
+        return {"ok": True, "contributor": "already_resolved"}
+        
+    # Parse PR
+    pr_match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)", body.pr_url)
+    if not pr_match:
+        raise HTTPException(status_code=400, detail="Invalid GitHub Pull Request URL")
+        
+    owner, repo, pr_num = pr_match.groups()
+    settings = get_settings()
+    
+    pr_data = await fetch_github_api(f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_num}", settings)
+    if not pr_data:
+        raise HTTPException(status_code=400, detail="Could not retrieve Pull Request details from GitHub API")
+        
+    # Check if PR is merged
+    if not pr_data.get("merged", False):
+        raise HTTPException(status_code=400, detail="Pull Request has not been merged yet")
+        
+    contributor = pr_data.get("user", {}).get("login", "Contributor")
+    
+    bounty.status = "resolved"
+    await db.commit()
+    return {"ok": True, "contributor": contributor}
+
+
+@router.get("/github/detect-framework")
+async def detect_framework(url: str, user: User = Depends(get_current_user)):
+    from app.config import get_settings
+    import re
+    settings = get_settings()
+    
+    repo_match = re.match(r"https://github\.com/([^/]+)/([^/]+)", url)
+    if not repo_match:
+        raise HTTPException(status_code=400, detail="Invalid GitHub Repository URL")
+        
+    owner, repo = repo_match.groups()
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+        
+    # Get contents of root directory
+    contents = await fetch_github_api(f"https://api.github.com/repos/{owner}/{repo}/contents", settings)
+    if not contents or not isinstance(contents, list):
+        return {"framework": "Generic Service"}
+        
+    filenames = {c.get("name") for c in contents if c.get("name")}
+    
+    if "next.config.js" in filenames or "next.config.mjs" in filenames:
+        return {"framework": "Next.js/React"}
+    elif "package.json" in filenames:
+        return {"framework": "NodeJS/Express"}
+    elif "manage.py" in filenames or "requirements.txt" in filenames or "pyproject.toml" in filenames:
+        return {"framework": "Python/FastAPI/Django"}
+    elif "index.html" in filenames:
+        return {"framework": "Static HTML/JS"}
+    return {"framework": "Generic Service"}
+
+
+@router.post("/deployments")
+async def create_deployment(
+    body: CreateDeploymentRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.deployment import Deployment
+    from app.config import get_settings
+    from app.services.ai_evaluator import generate_saasify_preview
+    import re
+    
+    # Check subdomain availability
+    sub_check = await db.execute(select(Deployment).where(Deployment.subdomain == body.subdomain))
+    if sub_check.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Subdomain is already in use")
+        
+    # Fetch README.md contents for AI evaluator
+    settings = get_settings()
+    repo_match = re.match(r"https://github\.com/([^/]+)/([^/]+)", body.repo_url)
+    readme_text = "No readme provided."
+    if repo_match:
+        owner, repo = repo_match.groups()
+        if repo.endswith(".git"):
+            repo = repo[:-4]
+        readme_data = await fetch_github_api(f"https://api.github.com/repos/{owner}/{repo}/readme", settings)
+        if readme_data and readme_data.get("download_url"):
+            import httpx
+            async with httpx.AsyncClient() as client:
+                try:
+                    resp = await client.get(readme_data.get("download_url"), timeout=5.0)
+                    if resp.status_code == 200:
+                        readme_text = resp.text
+                except Exception:
+                    pass
+                    
+    # Generate live preview layout using AI
+    preview_schema = await generate_saasify_preview(readme_text, body.app_name)
+    
+    deployment = Deployment(
+        user_id=user.id,
+        repo_url=body.repo_url,
+        subdomain=body.subdomain,
+        pricing_tier=body.pricing_tier,
+        preview_schema=preview_schema
+    )
+    
+    db.add(deployment)
+    await db.commit()
+    await db.refresh(deployment)
+    return {
+        "id": str(deployment.id),
+        "subdomain": deployment.subdomain,
+        "repo_url": deployment.repo_url,
+        "pricing_tier": deployment.pricing_tier,
+        "live_url": f"https://{deployment.subdomain}.ideora.app",
+        "created_at": deployment.created_at.isoformat()
+    }
+
+
+@router.get("/deployments")
+async def list_deployments(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from app.models.deployment import Deployment
+    result = await db.execute(select(Deployment).where(Deployment.user_id == user.id).order_by(Deployment.created_at.desc()))
+    deployments = result.scalars().all()
+    return [{
+        "id": str(d.id),
+        "subdomain": d.subdomain,
+        "repo_url": d.repo_url,
+        "pricing_tier": d.pricing_tier,
+        "live_url": f"https://{d.subdomain}.ideora.app",
+        "created_at": d.created_at.isoformat()
+    } for d in deployments]
+
+
+@router.get("/deployments/{deployment_id}")
+async def get_deployment(
+    deployment_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.deployment import Deployment
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id, Deployment.user_id == user.id))
+    deployment = result.scalar_one_or_none()
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    return {
+        "id": str(deployment.id),
+        "subdomain": deployment.subdomain,
+        "repo_url": deployment.repo_url,
+        "pricing_tier": deployment.pricing_tier,
+        "preview_schema": deployment.preview_schema,
+        "live_url": f"https://{deployment.subdomain}.ideora.app",
+        "created_at": deployment.created_at.isoformat()
+    }
 @router.get("/dashboard/purchases")
 async def get_purchases(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from sqlalchemy.orm import selectinload
@@ -577,3 +785,34 @@ async def get_purchases(user: User = Depends(get_current_user), db: AsyncSession
             resp.github_repo_url = t.listing.github_repo_url
         responses.append(resp)
     return responses
+
+
+@router.get("/github/repos")
+async def get_github_repos(username: str, user: User = Depends(get_current_user)):
+    from app.config import get_settings
+    import httpx
+    settings = get_settings()
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if settings.github_token:
+        headers["Authorization"] = f"Bearer {settings.github_token}"
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"https://api.github.com/users/{username}/repos?type=public&sort=updated",
+                headers=headers,
+                timeout=10.0
+            )
+            if resp.status_code != 200:
+                detail = "Failed to fetch repos from GitHub"
+                try:
+                    detail = resp.json().get("message", detail)
+                except Exception:
+                    pass
+                raise HTTPException(status_code=resp.status_code, detail=detail)
+            return resp.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"GitHub API is unreachable: {exc}")

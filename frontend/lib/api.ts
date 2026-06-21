@@ -211,7 +211,7 @@ export async function getBounties() {
   return apiFetch<any[]>("/api/bounties");
 }
 
-export async function createBounty(payload: { github_issue_url: string; amount_cents: number }) {
+export async function createBounty(payload: { github_issue_url: string; amount_cents: number; custom_instructions?: string }) {
   return apiFetch<{ ok: boolean; bounty_id: string }>("/api/bounties", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -221,5 +221,38 @@ export async function createBounty(payload: { github_issue_url: string; amount_c
 export async function resolveBounty(id: string) {
   return apiFetch<{ ok: boolean }>(`/api/bounties/${id}/resolve`, {
     method: "POST",
+  });
+}
+
+export async function fetchGithubRepos(username: string) {
+  return apiFetch<any[]>(`/api/github/repos?username=${encodeURIComponent(username)}`);
+}
+
+export async function detectFramework(repoUrl: string) {
+  return apiFetch<{ framework: string }>(`/api/github/detect-framework?url=${encodeURIComponent(repoUrl)}`);
+}
+
+export async function createDeployment(payload: { repo_url: string; subdomain: string; pricing_tier: string; app_name: string }) {
+  return apiFetch<{ id: string; subdomain: string; repo_url: string; pricing_tier: string; live_url: string }>(
+    "/api/deployments",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function getDeployments() {
+  return apiFetch<any[]>("/api/deployments");
+}
+
+export async function getDeployment(id: string) {
+  return apiFetch<any>(`/api/deployments/${id}`);
+}
+
+export async function resolveBountyPR(bountyId: string, prUrl: string) {
+  return apiFetch<{ ok: boolean; contributor: string }>(`/api/bounties/${bountyId}/resolve-pr`, {
+    method: "POST",
+    body: JSON.stringify({ pr_url: prUrl }),
   });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt } from "../../lib/api";
+import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments } from "../../lib/api";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -9,6 +9,7 @@ export default function DashboardPage() {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [myListings, setMyListings] = useState<any[]>([]);
+  const [deployments, setDeployments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Edit state
@@ -23,11 +24,12 @@ export default function DashboardPage() {
   const [publishingRepo, setPublishingRepo] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getPurchases(), getSales(), getMyListings()])
-      .then(([p, s, ml]) => {
+    Promise.all([getPurchases(), getSales(), getMyListings(), getDeployments()])
+      .then(([p, s, ml, d]) => {
         setPurchases(p);
         setSales(s);
         setMyListings(ml);
+        setDeployments(d);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -39,13 +41,11 @@ export default function DashboardPage() {
     if (!githubUsername) return;
     setFetchingRepos(true);
     try {
-      const res = await fetch(`https://api.github.com/users/${githubUsername}/repos?type=public&sort=updated`);
-      if (res.ok) {
-        const data = await res.json();
-        setGithubRepos(data);
-      }
-    } catch (err) {
+      const data = await fetchGithubRepos(githubUsername);
+      setGithubRepos(data);
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Failed to fetch repositories. Please make sure the username is correct.");
     } finally {
       setFetchingRepos(false);
     }
@@ -182,6 +182,18 @@ export default function DashboardPage() {
           }}
         >
           Public Drafts
+        </button>
+        <button 
+          onClick={() => setActiveTab("deployments")} 
+          style={{ 
+            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
+            fontWeight: activeTab === "deployments" ? "800" : "600", 
+            color: activeTab === "deployments" ? "var(--accent-green)" : "var(--text-muted)",
+            borderBottom: activeTab === "deployments" ? "3px solid var(--accent-gold)" : "3px solid transparent",
+            transform: "translateY(2px)", transition: "all 0.3s"
+          }}
+        >
+          My Deployments
         </button>
       </div>
 
@@ -326,6 +338,41 @@ export default function DashboardPage() {
               )}
             </div>
           ))}
+        </div>
+      ) : activeTab === "deployments" ? (
+        <div style={{ animation: "fadeIn 0.4s" }}>
+          {deployments.length === 0 ? (
+            <div className="glass-panel" style={{ textAlign: "center", padding: "5rem", color: "var(--text-muted)" }}>
+              <p style={{ fontSize: "1.2rem", marginBottom: "1.5rem" }}>You haven't deployed any codebases to SaaSify yet.</p>
+              <Link href="/deploy" className="premium-btn" style={{ textDecoration: "none" }}>SaaSify a Repo</Link>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {deployments.map((d) => (
+                <div key={d.id} className="glass-panel" style={{ padding: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                  <div>
+                    <h3 style={{ fontSize: "1.5rem", color: "var(--text-dark)", margin: "0 0 0.5rem 0", fontFamily: "'Playfair Display', serif" }}>
+                      {d.subdomain}.ideora.app
+                    </h3>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
+                      Source Repo: <a href={d.repo_url} target="_blank" rel="noreferrer" style={{ color: "#60a5fa" }}>{d.repo_url}</a>
+                    </p>
+                    <span style={{ fontSize: "0.8rem", padding: "0.2rem 0.6rem", borderRadius: "20px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", fontWeight: "bold", textTransform: "uppercase" }}>
+                      {d.pricing_tier} Tier
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem" }}>
+                    <Link href={`/deploy/live/${d.id}`} className="btn-ghost" style={{ padding: "0.7rem 1.5rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--accent-gold)", color: "var(--accent-gold)", textDecoration: "none" }}>
+                      Launch Live Console
+                    </Link>
+                    <a href={d.live_url} target="_blank" rel="noreferrer" className="premium-btn" style={{ textDecoration: "none", fontSize: "0.9rem", padding: "0.7rem 1.5rem" }}>
+                      Open App URL
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ animation: "fadeIn 0.4s" }}>

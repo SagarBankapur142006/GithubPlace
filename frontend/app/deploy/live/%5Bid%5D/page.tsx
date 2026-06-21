@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { getDeployment } from "../../../../lib/api";
 import Link from "next/link";
 
@@ -39,7 +39,8 @@ interface Schema {
   interactive_demo_widget: DemoWidget;
 }
 
-export default function LivePreviewPage({ params }: { params: { id: string } }) {
+export default function LivePreviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [deployment, setDeployment] = useState<any>(null);
   const [schema, setSchema] = useState<Schema | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,7 @@ export default function LivePreviewPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const fetchDep = async () => {
       try {
-        const dep = await getDeployment(params.id);
+        const dep = await getDeployment(id);
         setDeployment(dep);
         if (dep.preview_schema) {
           setSchema(dep.preview_schema);
@@ -71,7 +72,7 @@ export default function LivePreviewPage({ params }: { params: { id: string } }) 
       }
     };
     fetchDep();
-  }, [params.id]);
+  }, [id]);
 
   const handleRunDemo = (e: React.FormEvent) => {
     e.preventDefault();

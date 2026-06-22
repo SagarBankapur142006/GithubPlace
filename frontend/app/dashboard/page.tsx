@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [githubRepos, setGithubRepos] = useState<any[]>([]);
   const [fetchingRepos, setFetchingRepos] = useState(false);
   const [publishingRepo, setPublishingRepo] = useState<string | null>(null);
+  const [filterQuery, setFilterQuery] = useState("");
 
   useEffect(() => {
     Promise.all([getMe(), getPurchases(), getSales(), getMyListings(), getDeployments()])
@@ -54,7 +55,9 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const draftRepos = githubRepos.filter(repo => !myListings.find(l => l.github_repo_url === repo.html_url));
+  const draftRepos = githubRepos
+    .filter(repo => !myListings.find(l => l.github_repo_url === repo.html_url))
+    .filter(repo => repo.name.toLowerCase().includes(filterQuery.toLowerCase()));
 
   const handleFetchRepos = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,12 +400,12 @@ export default function DashboardPage() {
       ) : (
         <div style={{ animation: "fadeIn 0.4s" }}>
           <div className="glass-panel" style={{ padding: "2.5rem", marginBottom: "3rem" }}>
-            <h2 style={{ fontSize: "1.5rem", color: "var(--text-dark)", marginBottom: "1rem" }}>Import from GitHub</h2>
-            <p style={{ color: "var(--text-muted)", marginBottom: "1.5rem" }}>Instantly scan your public GitHub repositories and use AI to evaluate their market value.</p>
+            <h2 style={{ fontSize: "1.5rem", color: "var(--text-dark)", marginBottom: "1rem" }}>GitHub Importer</h2>
+            <p style={{ color: "var(--text-muted)", marginBottom: "1.5rem" }}>Search any public GitHub username to import their open-source repositories and evaluate them using AI.</p>
             <form onSubmit={handleFetchRepos} style={{ display: "flex", gap: "1rem" }}>
               <input 
                 type="text" 
-                placeholder="Enter YOUR GitHub Username (e.g. your-handle)..." 
+                placeholder="Enter GitHub Username (e.g. SagarBankapur142006 or any other user)..." 
                 className="premium-input" 
                 value={githubUsername} 
                 onChange={(e) => setGithubUsername(e.target.value)} 
@@ -410,16 +413,27 @@ export default function DashboardPage() {
                 style={{ flex: 1 }}
               />
               <button type="submit" disabled={fetchingRepos} className="premium-btn">
-                {fetchingRepos ? "Scanning..." : "Fetch Repos"}
+                {fetchingRepos ? "Searching..." : "Search User Repos"}
               </button>
             </form>
           </div>
 
           {githubRepos.length > 0 && (
             <div>
-              <h3 style={{ fontSize: "1.2rem", color: "var(--text-dark)", marginBottom: "1.5rem", textTransform: "uppercase", letterSpacing: "1px" }}>Public Drafts</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+                <h3 style={{ fontSize: "1.2rem", color: "var(--text-dark)", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>Public Repositories</h3>
+                <input
+                  type="text"
+                  placeholder="Filter repositories by name..."
+                  className="premium-input"
+                  style={{ maxWidth: "300px", padding: "0.5rem 1rem", fontSize: "0.9rem" }}
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                />
+              </div>
+
               {draftRepos.length === 0 ? (
-                <p style={{ color: "var(--text-muted)" }}>All fetched repos are already listed!</p>
+                <p style={{ color: "var(--text-muted)" }}>No matching repositories found.</p>
               ) : (
                 <div style={{ display: "grid", gap: "1.5rem" }}>
                   {draftRepos.map(repo => (

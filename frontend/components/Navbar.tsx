@@ -22,11 +22,12 @@ export function Navbar({ authOnly = false }: { authOnly?: boolean }) {
         Ideora.
       </Link>
       <div className="nav-links">
+        <Link href="/" className="nav-link">Discover</Link>
         {user && (
           <>
-            <Link href="/sell" className="nav-link">List Codebase</Link>
+            {user.github_username && <Link href="/sell" className="nav-link">List Codebase</Link>}
             <Link href="/bounties" className="nav-link">Bounties</Link>
-            <Link href="/deploy" className="nav-link">SaaSify</Link>
+            {user.github_username && <Link href="/deploy" className="nav-link">SaaSify</Link>}
             <Link href="/dashboard" className="nav-link" style={{ color: "var(--accent-green)" }}>Dashboard</Link>
           </>
         )}

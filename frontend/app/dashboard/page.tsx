@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments, getMe } from "../../lib/api";
 import Link from "next/link";
+import { Navbar } from "../../components/Navbar";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("listings");
@@ -33,6 +34,10 @@ export default function DashboardPage() {
         setSales(s);
         setMyListings(ml);
         setDeployments(d);
+
+        if (me && !me.github_username) {
+          setActiveTab("purchases");
+        }
 
         // Auto-fetch repositories if logged-in user has linked github account
         if (me?.github_username) {
@@ -135,65 +140,74 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ maxWidth: "1100px", margin: "5rem auto", padding: "0 20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4rem" }}>
-        <h1 className="gradient-text" style={{ fontSize: "3.5rem", margin: 0, fontFamily: "'Playfair Display', serif" }}>Command Center</h1>
-        <Link href="/sell" className="premium-btn" style={{ textDecoration: "none", fontSize: "1rem", padding: "1rem 2rem" }}>
-          Sell Codebase
-        </Link>
-      </div>
+    <>
+      <Navbar />
+      <div style={{ maxWidth: "1100px", margin: "8rem auto 6rem auto", padding: "0 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4rem" }}>
+          <h1 className="gradient-text" style={{ fontSize: "3.5rem", margin: 0, fontFamily: "'Playfair Display', serif" }}>Command Center</h1>
+          {user?.github_username && (
+            <Link href="/sell" className="premium-btn" style={{ textDecoration: "none", fontSize: "1rem", padding: "1rem 2rem" }}>
+              Sell Codebase
+            </Link>
+          )}
+        </div>
 
-      <div style={{ display: "flex", gap: "3rem", marginBottom: "4rem", borderBottom: "2px solid var(--border-color)" }}>
-        <button 
-          onClick={() => setActiveTab("purchases")} 
-          style={{ 
-            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
-            fontWeight: activeTab === "purchases" ? "800" : "600", 
-            color: activeTab === "purchases" ? "var(--accent-green)" : "var(--text-muted)",
-            borderBottom: activeTab === "purchases" ? "3px solid var(--accent-gold)" : "3px solid transparent",
-            transform: "translateY(2px)", transition: "all 0.3s"
-          }}
-        >
-          My Acquisitions
-        </button>
-        <button 
-          onClick={() => setActiveTab("listings")} 
-          style={{ 
-            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
-            fontWeight: activeTab === "listings" ? "800" : "600", 
-            color: activeTab === "listings" ? "var(--accent-green)" : "var(--text-muted)",
-            borderBottom: activeTab === "listings" ? "3px solid var(--accent-gold)" : "3px solid transparent",
-            transform: "translateY(2px)", transition: "all 0.3s"
-          }}
-        >
-          My Listings
-        </button>
+        <div style={{ display: "flex", gap: "3rem", marginBottom: "4rem", borderBottom: "2px solid var(--border-color)" }}>
+          <button 
+            onClick={() => setActiveTab("purchases")} 
+            style={{ 
+              background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
+              fontWeight: activeTab === "purchases" ? "800" : "600", 
+              color: activeTab === "purchases" ? "var(--accent-green)" : "var(--text-muted)",
+              borderBottom: activeTab === "purchases" ? "3px solid var(--accent-gold)" : "3px solid transparent",
+              transform: "translateY(2px)", transition: "all 0.3s"
+            }}
+          >
+            My Acquisitions
+          </button>
+          
+          {user?.github_username && (
+            <>
+              <button 
+                onClick={() => setActiveTab("listings")} 
+                style={{ 
+                  background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
+                  fontWeight: activeTab === "listings" ? "800" : "600", 
+                  color: activeTab === "listings" ? "var(--accent-green)" : "var(--text-muted)",
+                  borderBottom: activeTab === "listings" ? "3px solid var(--accent-gold)" : "3px solid transparent",
+                  transform: "translateY(2px)", transition: "all 0.3s"
+                }}
+              >
+                My Listings
+              </button>
 
-        <button 
-          onClick={() => setActiveTab("drafts")} 
-          style={{ 
-            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
-            fontWeight: activeTab === "drafts" ? "800" : "600", 
-            color: activeTab === "drafts" ? "var(--accent-green)" : "var(--text-muted)",
-            borderBottom: activeTab === "drafts" ? "3px solid var(--accent-gold)" : "3px solid transparent",
-            transform: "translateY(2px)", transition: "all 0.3s"
-          }}
-        >
-          Public Drafts
-        </button>
-        <button 
-          onClick={() => setActiveTab("deployments")} 
-          style={{ 
-            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
-            fontWeight: activeTab === "deployments" ? "800" : "600", 
-            color: activeTab === "deployments" ? "var(--accent-green)" : "var(--text-muted)",
-            borderBottom: activeTab === "deployments" ? "3px solid var(--accent-gold)" : "3px solid transparent",
-            transform: "translateY(2px)", transition: "all 0.3s"
-          }}
-        >
-          My Deployments
-        </button>
-      </div>
+              <button 
+                onClick={() => setActiveTab("drafts")} 
+                style={{ 
+                  background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
+                  fontWeight: activeTab === "drafts" ? "800" : "600", 
+                  color: activeTab === "drafts" ? "var(--accent-green)" : "var(--text-muted)",
+                  borderBottom: activeTab === "drafts" ? "3px solid var(--accent-gold)" : "3px solid transparent",
+                  transform: "translateY(2px)", transition: "all 0.3s"
+                }}
+              >
+                Public Drafts
+              </button>
+              <button 
+                onClick={() => setActiveTab("deployments")} 
+                style={{ 
+                  background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
+                  fontWeight: activeTab === "deployments" ? "800" : "600", 
+                  color: activeTab === "deployments" ? "var(--accent-green)" : "var(--text-muted)",
+                  borderBottom: activeTab === "deployments" ? "3px solid var(--accent-gold)" : "3px solid transparent",
+                  transform: "translateY(2px)", transition: "all 0.3s"
+                }}
+              >
+                My Deployments
+              </button>
+            </>
+          )}
+        </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "5rem", color: "var(--text-muted)", fontSize: "1.2rem", animation: "fadeIn 0.5s" }}>
@@ -406,5 +420,6 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

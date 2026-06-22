@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { sellerEvaluate, sellerPublishListing } from "../../lib/api";
+import { sellerEvaluate, sellerPublishListing, getMe } from "../../lib/api";
+import { Navbar } from "../../components/Navbar";
 
 function SellForm() {
   const router = useRouter();
@@ -14,6 +15,20 @@ function SellForm() {
   const [priceCents, setPriceCents] = useState(15000);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [user, setUser] = useState<any>(null);
+  const [checkingUser, setCheckingUser] = useState(true);
+
+  useEffect(() => {
+    getMe()
+      .then((u) => {
+        setUser(u);
+        setCheckingUser(false);
+      })
+      .catch(() => {
+        setCheckingUser(false);
+        router.push("/signin?redirect=sell");
+      });
+  }, [router]);
 
   useEffect(() => {
     const url = searchParams.get("github_url");
@@ -57,8 +72,41 @@ function SellForm() {
     }
   };
 
+  if (checkingUser) {
+    return (
+      <>
+        <Navbar />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", color: "var(--text-muted)", fontSize: "1.2rem" }}>
+          Authenticating access...
+        </div>
+      </>
+    );
+  }
+
+  if (!user || !user.github_username) {
+    return (
+      <>
+        <Navbar />
+        <div style={{ maxWidth: "600px", margin: "10rem auto 6rem auto", padding: "0 20px" }}>
+          <div className="glass-panel" style={{ padding: "4rem", textAlign: "center" }}>
+            <div style={{ fontSize: "3.5rem", marginBottom: "1.5rem" }}>🔒</div>
+            <h2 style={{ fontSize: "2.2rem", color: "var(--accent-green)", marginBottom: "1.5rem", fontFamily: "'Playfair Display', serif" }}>Creator Account Required</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "1.1rem", marginBottom: "2.5rem", lineHeight: "1.6" }}>
+              To list private repositories and generate AI pitch decks, you must sign in as a **Creator** using GitHub.
+            </p>
+            <button onClick={() => router.push("/signin?redirect=sell")} className="premium-btn">
+              Sign In as Creator
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: "850px", margin: "6rem auto", padding: "0 20px" }}>
+    <>
+      <Navbar />
+      <div style={{ maxWidth: "850px", margin: "8rem auto 6rem auto", padding: "0 20px" }}>
       <div style={{ textAlign: "center", marginBottom: "4rem" }}>
         <h1 className="gradient-text" style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>List a Private Codebase</h1>
         <p style={{ color: "var(--text-muted)", fontSize: "1.2rem" }}>Turn your hard work into an acquisition target in minutes using AI.</p>
@@ -136,6 +184,7 @@ function SellForm() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

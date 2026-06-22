@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultTech = document.getElementById("result-tech");
   const resultAudience = document.getElementById("result-audience");
   const resultVerdict = document.getElementById("result-verdict");
-  const btnList = document.getElementById("btn-list");
+
 
   let activeTab = "url"; // "url" or "text"
 
@@ -173,15 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resultAudience.textContent = deck.target_audience || "Founders looking for high-potential MVP starters.";
     resultVerdict.textContent = deck.expert_analysis || "No verdict rendered.";
-
-    // Configure listing button redirection
-    btnList.onclick = () => {
-      let targetUrl = usedProd ? "http://34.224.7.229/sell" : "http://localhost:3000/sell";
-      if (githubUrl) {
-        targetUrl += `?github_url=${encodeURIComponent(githubUrl)}`;
-      }
-      window.open(targetUrl, "_blank");
-    };
 
     show(resultsContainer);
   }

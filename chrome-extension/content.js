@@ -459,9 +459,8 @@ function showValuationModal(initialText) {
       </div>
       <div id="ideora-content-area" style="flex-grow:1; display:flex; flex-direction:column;"></div>
     </div>
-    <div class="footer" id="ideora-footer" style="display:none;">
-      <button class="btn btn-secondary" id="ideora-re-evaluate">🔄 Re-Evaluate</button>
-      <button class="btn btn-primary" id="ideora-list">✨ List on Ideora</button>
+    <div class="footer" id="ideora-footer" style="display:none; justify-content:center;">
+      <button class="btn btn-secondary" id="ideora-re-evaluate" style="width: 100%;">🔄 Re-Evaluate</button>
     </div>
   `;
 
@@ -489,14 +488,7 @@ function showValuationModal(initialText) {
   // Redirect to Sell Page with prefilled URL if on github
   let usedProduction = true;
 
-  // Redirect to Sell Page with prefilled URL if on github
-  shadow.getElementById("ideora-list").addEventListener("click", () => {
-    let targetUrl = usedProduction ? "http://34.224.7.229/sell" : "http://localhost:3000/sell";
-    if (window.location.host.includes("github.com")) {
-      targetUrl += `?github_url=${encodeURIComponent(window.location.href)}`;
-    }
-    window.open(targetUrl, "_blank");
-  });
+
 
   // Trigger initial valuation
   performValuation(initialText, "general");

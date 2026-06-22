@@ -581,6 +581,12 @@ async def delete_listing(
     listing = result.scalar_one_or_none()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found or access denied")
+    
+    # Delete related transactions first to prevent foreign key constraint violation
+    from app.models.transaction import Transaction
+    from sqlalchemy import delete as sql_delete
+    await db.execute(sql_delete(Transaction).where(Transaction.listing_id == listing_id))
+    
     await db.delete(listing)
     await db.commit()
     return {"ok": True}

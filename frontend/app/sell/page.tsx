@@ -158,6 +158,64 @@ function SellForm() {
               </div>
             </div>
 
+            {/* Growth Potential Score Showcase */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "2rem",
+              background: "linear-gradient(135deg, var(--accent-green), #07170e)",
+              color: "var(--bg-cream)",
+              padding: "2rem",
+              borderRadius: "var(--radius-md)",
+              marginBottom: "2.5rem",
+              boxShadow: "0 10px 30px rgba(13, 40, 24, 0.15)",
+              border: "1px solid rgba(212, 175, 55, 0.2)",
+              flexWrap: "wrap"
+            }}>
+              <div style={{
+                position: "relative",
+                width: "90px",
+                height: "90px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--accent-gold), #f97316)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "2rem",
+                fontWeight: "900",
+                color: "#000",
+                boxShadow: "0 0 20px rgba(212, 175, 55, 0.4)",
+                flexShrink: 0
+              }}>
+                {pitchDeck.growth_potential_score}
+              </div>
+              <div style={{ flex: 1, minWidth: "250px" }}>
+                <h3 style={{
+                  fontSize: "1.4rem",
+                  fontFamily: "'Playfair Display', serif",
+                  color: "var(--accent-gold)",
+                  marginBottom: "0.4rem"
+                }}>
+                  Growth Potential: {pitchDeck.growth_potential_score}/100
+                </h3>
+                <p style={{
+                  fontSize: "0.95rem",
+                  color: "#9ab0a2",
+                  lineHeight: "1.5"
+                }}>
+                  {pitchDeck.growth_potential_score >= 90 ? (
+                    "Elite Tier: Exceptional codebase architecture and market alignment. Positioned for rapid scaling and high-margin monetization."
+                  ) : pitchDeck.growth_potential_score >= 70 ? (
+                    "Strong Tier: High-quality structure with verified workflows. Solid foundation ready for immediate product launching and customer acquisition."
+                  ) : pitchDeck.growth_potential_score >= 50 ? (
+                    "Moderate Tier: Functional codebase that presents a solid MVP. Needs targeted marketing and feature expansion to unlock its full valuation."
+                  ) : (
+                    "Fixer-Upper Tier: Early-stage prototype. Represents a blank canvas with significant customization requirements to achieve market viability."
+                  )}
+                </p>
+              </div>
+            </div>
+
             <div style={{ background: "rgba(212, 175, 55, 0.05)", padding: "2rem", borderRadius: "var(--radius-sm)", border: "1px solid rgba(212, 175, 55, 0.2)", marginBottom: "3rem" }}>
               <h4 style={{ color: "var(--accent-gold)", fontWeight: "800", marginBottom: "0.8rem", textTransform: "uppercase", fontSize: "0.85rem", letterSpacing: "1px" }}>Expert Analysis</h4>
               <p style={{ color: "var(--text-dark)", fontStyle: "italic", lineHeight: "1.7" }}>"{pitchDeck.expert_analysis}"</p>

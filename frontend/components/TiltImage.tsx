@@ -49,10 +49,7 @@ export function TiltImage({ src, alt, speed = 0.1 }: { src: string; alt: string;
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           transition: "transform 0.1s ease-out",
           transformStyle: "preserve-3d",
-          boxShadow: "0 30px 60px rgba(13, 40, 24, 0.15)",
-          borderRadius: "20px",
-          overflow: "hidden",
-          border: "1px solid rgba(212, 175, 55, 0.3)"
+          filter: "drop-shadow(0 30px 40px rgba(13, 40, 24, 0.25))",
         }}
       >
         <img 
@@ -63,7 +60,7 @@ export function TiltImage({ src, alt, speed = 0.1 }: { src: string; alt: string;
             width: "100%",
             maxWidth: "400px",
             height: "auto",
-            transform: "translateZ(30px)", // Pop out effect
+            transform: "translateZ(30px)",
           }} 
         />
       </div>

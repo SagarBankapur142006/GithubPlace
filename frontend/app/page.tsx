@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { BackgroundElements } from "@/components/BackgroundElements";
 import { ListingCard, ListingDetailView } from "@/components/ListingCard";
 import { Navbar } from "@/components/Navbar";
-import { TiltImage } from "@/components/TiltImage";
 import {
   fetchAutocomplete,
   fetchListings,
@@ -136,13 +135,6 @@ export default function HomePage() {
       <Navbar />
 
       <header className="hero" style={{ position: "relative" }}>
-        {/* Floating 3D Interactive Images */}
-        <div style={{ position: "absolute", top: "10%", left: "5%", zIndex: 0 }}>
-           <TiltImage src="/hero_laptop.png" alt="Code Editor" speed={-0.15} />
-        </div>
-        <div style={{ position: "absolute", bottom: "-5%", right: "5%", zIndex: 0 }}>
-           <TiltImage src="/hero_rocket.png" alt="Launch Startup" speed={0.12} />
-        </div>
 
         <div className="hero-content reveal">
           <div className="hero-badge">Premium Digital Assets</div>

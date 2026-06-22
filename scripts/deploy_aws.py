@@ -169,6 +169,7 @@ BACKEND_URL=http://localhost:8000
 GITHUB_TOKEN={github_token}
 GEMINI_API_KEY={gemini_key}
 AI_PROVIDER=gemini
+GEMINI_MODEL=gemini-2.5-flash
 RAZORPAY_KEY_ID={razorpay_id}
 RAZORPAY_KEY_SECRET={razorpay_secret}
 RAZORPAY_WEBHOOK_SECRET={razorpay_webhook}

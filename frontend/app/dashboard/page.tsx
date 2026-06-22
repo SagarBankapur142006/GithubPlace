@@ -59,20 +59,6 @@ export default function DashboardPage() {
     .filter(repo => !myListings.find(l => l.github_repo_url === repo.html_url))
     .filter(repo => repo.name.toLowerCase().includes(filterQuery.toLowerCase()));
 
-  const handleFetchRepos = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!githubUsername) return;
-    setFetchingRepos(true);
-    try {
-      const data = await fetchGithubRepos(githubUsername);
-      setGithubRepos(data);
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to fetch repositories. Please make sure the username is correct.");
-    } finally {
-      setFetchingRepos(false);
-    }
-  };
 
   const handleAutoPublish = async (repo: any) => {
     setPublishingRepo(repo.name);
@@ -399,41 +385,41 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div style={{ animation: "fadeIn 0.4s" }}>
-          <div className="glass-panel" style={{ padding: "2.5rem", marginBottom: "3rem" }}>
-            <h2 style={{ fontSize: "1.5rem", color: "var(--text-dark)", marginBottom: "1rem" }}>GitHub Importer</h2>
-            <p style={{ color: "var(--text-muted)", marginBottom: "1.5rem" }}>Search any public GitHub username to import their open-source repositories and evaluate them using AI.</p>
-            <form onSubmit={handleFetchRepos} style={{ display: "flex", gap: "1rem" }}>
-              <input 
-                type="text" 
-                placeholder="Enter GitHub Username (e.g. SagarBankapur142006 or any other user)..." 
-                className="premium-input" 
-                value={githubUsername} 
-                onChange={(e) => setGithubUsername(e.target.value)} 
-                required 
-                style={{ flex: 1 }}
-              />
-              <button type="submit" disabled={fetchingRepos} className="premium-btn">
-                {fetchingRepos ? "Searching..." : "Search User Repos"}
-              </button>
-            </form>
-          </div>
-
-          {githubRepos.length > 0 && (
+          {!user?.github_username ? (
+            <div className="glass-panel" style={{ textAlign: "center", padding: "3rem" }}>
+              <h2 style={{ fontSize: "1.5rem", color: "var(--text-dark)", marginBottom: "1rem" }}>Import from GitHub</h2>
+              <p style={{ color: "var(--text-muted)", marginBottom: "2rem" }}>You need to be signed in with GitHub to import your repositories.</p>
+              <Link href="/signin" className="premium-btn" style={{ textDecoration: "none" }}>
+                Sign In with GitHub
+              </Link>
+            </div>
+          ) : (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
-                <h3 style={{ fontSize: "1.2rem", color: "var(--text-dark)", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>Public Repositories</h3>
-                <input
-                  type="text"
-                  placeholder="Filter repositories by name..."
-                  className="premium-input"
-                  style={{ maxWidth: "300px", padding: "0.5rem 1rem", fontSize: "0.9rem" }}
-                  value={filterQuery}
-                  onChange={(e) => setFilterQuery(e.target.value)}
-                />
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", color: "var(--text-dark)", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>Your Public Repositories</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: "5px 0 0 0" }}>Import and list your repositories using AI evaluation.</p>
+                </div>
+                {githubRepos.length > 0 && (
+                  <input
+                    type="text"
+                    placeholder="Filter repositories by name..."
+                    className="premium-input"
+                    style={{ maxWidth: "300px", padding: "0.5rem 1rem", fontSize: "0.9rem" }}
+                    value={filterQuery}
+                    onChange={(e) => setFilterQuery(e.target.value)}
+                  />
+                )}
               </div>
 
-              {draftRepos.length === 0 ? (
-                <p style={{ color: "var(--text-muted)" }}>No matching repositories found.</p>
+              {fetchingRepos ? (
+                <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)" }}>
+                  Retrieving your repositories from GitHub...
+                </div>
+              ) : draftRepos.length === 0 ? (
+                <div className="glass-panel" style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
+                  {githubRepos.length === 0 ? "No public repositories found in your GitHub account." : "No matching repositories found."}
+                </div>
               ) : (
                 <div style={{ display: "grid", gap: "1.5rem" }}>
                   {draftRepos.map(repo => (

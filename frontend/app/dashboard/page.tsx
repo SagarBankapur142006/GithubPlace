@@ -168,18 +168,7 @@ export default function DashboardPage() {
         >
           My Listings
         </button>
-        <button 
-          onClick={() => setActiveTab("sales")} 
-          style={{ 
-            background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: "0 0 1rem 0", 
-            fontWeight: activeTab === "sales" ? "800" : "600", 
-            color: activeTab === "sales" ? "var(--accent-green)" : "var(--text-muted)",
-            borderBottom: activeTab === "sales" ? "3px solid var(--accent-gold)" : "3px solid transparent",
-            transform: "translateY(2px)", transition: "all 0.3s"
-          }}
-        >
-          Escrow Sales
-        </button>
+
         <button 
           onClick={() => setActiveTab("drafts")} 
           style={{ 
@@ -317,37 +306,7 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
-      ) : activeTab === "sales" ? (
-        <div style={{ animation: "fadeIn 0.4s" }}>
-          {sales.length === 0 ? (
-            <div className="glass-panel" style={{ textAlign: "center", padding: "5rem", color: "var(--text-muted)" }}>
-              <p style={{ fontSize: "1.2rem", marginBottom: "1.5rem" }}>You don't have any escrow sales requiring delivery.</p>
-            </div>
-          ) : sales.map((s) => (
-            <div key={s.id} className="glass-panel" style={{ padding: "2.5rem", marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.5rem" }}>
-                  <h3 style={{ fontSize: "1.8rem", color: "var(--text-dark)", margin: 0, fontFamily: "'Playfair Display', serif" }}>{s.listing?.title}</h3>
-                  <span style={{ fontSize: "0.8rem", padding: "0.2rem 0.6rem", borderRadius: "20px", background: s.listing?.visibility === "public" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)", color: s.listing?.visibility === "public" ? "#10b981" : "#f59e0b", fontWeight: "bold", textTransform: "uppercase" }}>
-                    {s.listing?.visibility || "private"}
-                  </span>
-                </div>
-                <p style={{ color: "var(--text-muted)", fontSize: "1.1rem", marginBottom: "1rem" }}>Earnings: <strong style={{ color: "var(--accent-green)" }}>${(s.amount_cents / 100).toFixed(2)}</strong></p>
-                <div className={`status-badge status-${s.escrow_status}`}>
-                  {s.escrow_status}
-                </div>
-              </div>
-              {s.escrow_status === "held" && (
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1rem", maxWidth: "250px" }}>Send Codebase Link to Buyer.</p>
-                  <button onClick={() => handleDeliver(s.id)} className="premium-btn" style={{ background: "linear-gradient(135deg, #1d4ed8, #3b82f6)" }}>
-                    Mark as Transferred
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+
       ) : activeTab === "deployments" ? (
         <div style={{ animation: "fadeIn 0.4s" }}>
           {deployments.length === 0 ? (

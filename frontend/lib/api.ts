@@ -122,7 +122,7 @@ export async function getMe(): Promise<User | null> {
 }
 
 export async function createRazorpayOrder(listingId: string) {
-  return apiFetch<{ order_id: string; amount: number; currency: string; transaction_id: string }>("/api/checkout/create-order", {
+  return apiFetch<{ order_id: string; amount: number; currency: string; transaction_id: string; key_id: string }>("/api/checkout/create-order", {
     method: "POST",
     body: JSON.stringify({ listing_id: listingId }),
   });

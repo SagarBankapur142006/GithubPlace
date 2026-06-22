@@ -363,7 +363,8 @@ async def checkout_create_order(
         order_id=order_id,
         amount=transaction.amount_cents,
         currency=settings.razorpay_currency,
-        transaction_id=transaction.id
+        transaction_id=transaction.id,
+        key_id=settings.razorpay_key_id or ""
     )
 
 @router.post("/checkout/verify")

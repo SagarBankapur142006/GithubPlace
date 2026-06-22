@@ -84,6 +84,7 @@ class RazorpayOrderResponse(BaseModel):
     amount: int
     currency: str
     transaction_id: uuid.UUID
+    key_id: str
 
 
 class RazorpayVerifyRequest(BaseModel):

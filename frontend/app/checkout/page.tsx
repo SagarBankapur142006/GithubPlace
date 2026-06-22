@@ -46,7 +46,7 @@ function CheckoutContent() {
     setError("");
     try {
       // 1. Create Order on Backend
-      const { order_id, amount, currency, transaction_id } = await createRazorpayOrder(listing.id);
+      const { order_id, amount, currency, transaction_id, key_id } = await createRazorpayOrder(listing.id);
 
       // If dev mode fallback triggers (no keys configured)
       if (order_id.startsWith("dev_")) {
@@ -69,7 +69,7 @@ function CheckoutContent() {
 
       // 3. Initialize Razorpay Checkout
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+        key: key_id || "",
         amount: amount,
         currency: currency,
         name: "Ideora Marketplace",

@@ -28,21 +28,21 @@ services:
       - ./backend:/app
       - fulfillment_data:/app/fulfillment_packages
 
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: python -m worker.scheduler
-    env_file:
-      - ./backend/.env
-    environment:
-      - USE_SQLITE=false
-      - DATABASE_URL=postgresql+asyncpg://ideora:ideora@postgres:5432/ideora
-      - SYNC_DATABASE_URL=postgresql://ideora:ideora@postgres:5432/ideora
-    depends_on:
-      - postgres
-    volumes:
-      - ./backend:/app
+#  worker:
+#    build:
+#      context: ./backend
+#      dockerfile: Dockerfile
+#    command: python -m worker.scheduler
+#    env_file:
+#      - ./backend/.env
+#    environment:
+#      - USE_SQLITE=false
+#      - DATABASE_URL=postgresql+asyncpg://ideora:ideora@postgres:5432/ideora
+#      - SYNC_DATABASE_URL=postgresql://ideora:ideora@postgres:5432/ideora
+#    depends_on:
+#      - postgres
+#    volumes:
+#      - ./backend:/app
 
   frontend:
     build:

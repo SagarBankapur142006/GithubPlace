@@ -267,3 +267,15 @@ export async function resolveBountyPR(bountyId: string, prUrl: string) {
     body: JSON.stringify({ pr_url: prUrl }),
   });
 }
+
+export async function deleteListing(id: string) {
+  return apiFetch<{ ok: boolean }>(`/api/seller/listings/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function deleteDeployment(id: string) {
+  return apiFetch<{ ok: boolean }>(`/api/deployments/${id}`, {
+    method: "DELETE",
+  });
+}

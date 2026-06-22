@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments, getMe } from "../../lib/api";
+import { getPurchases, getSales, getMyListings, updateListing, markDelivered, confirmReceipt, fetchGithubRepos, getDeployments, getMe, deleteListing, deleteDeployment } from "../../lib/api";
 import Link from "next/link";
 import { Navbar } from "../../components/Navbar";
 
@@ -137,6 +137,26 @@ export default function DashboardPage() {
     await confirmReceipt(id);
     const p = await getPurchases();
     setPurchases(p);
+  };
+
+  const handleDeleteListing = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    try {
+      await deleteListing(id);
+      setMyListings(prev => prev.filter(l => l.id !== id));
+    } catch (err: any) {
+      alert("Delete failed: " + (err.message || String(err)));
+    }
+  };
+
+  const handleDeleteDeployment = async (id: string, subdomain: string) => {
+    if (!confirm(`Remove deployment "${subdomain}.ideora.app"? This cannot be undone.`)) return;
+    try {
+      await deleteDeployment(id);
+      setDeployments(prev => prev.filter((d: any) => d.id !== id));
+    } catch (err: any) {
+      alert("Delete failed: " + (err.message || String(err)));
+    }
   };
 
   return (
@@ -280,12 +300,20 @@ export default function DashboardPage() {
                   {l.pitch_deck?.extra_description && <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", marginTop: "0.5rem", fontStyle: "italic" }}>&ldquo;{l.pitch_deck.extra_description}&rdquo;</p>}
                   <div className={`status-badge status-${l.status}`} style={{ marginTop: "0.8rem" }}>{l.status}</div>
                 </div>
-                <button
-                  onClick={() => editingId === l.id ? setEditingId(null) : handleStartEdit(l)}
-                  style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "0.5rem 1.2rem", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600", whiteSpace: "nowrap" }}
-                >
-                  {editingId === l.id ? "✕ Cancel" : "✏ Edit"}
-                </button>
+                <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <button
+                    onClick={() => editingId === l.id ? setEditingId(null) : handleStartEdit(l)}
+                    style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "0.5rem 1.2rem", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600", whiteSpace: "nowrap" }}
+                  >
+                    {editingId === l.id ? "✕ Cancel" : "✏ Edit"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteListing(l.id, l.title)}
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600", whiteSpace: "nowrap" }}
+                  >
+                    🗑 Delete
+                  </button>
+                </div>
               </div>
 
               {editingId === l.id && (
@@ -343,13 +371,19 @@ export default function DashboardPage() {
                       {d.pricing_tier} Tier
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "1rem" }}>
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                     <Link href={`/deploy/live/${d.id}`} className="btn-ghost" style={{ padding: "0.7rem 1.5rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--accent-gold)", color: "var(--accent-gold)", textDecoration: "none" }}>
                       Launch Live Console
                     </Link>
                     <a href={d.live_url} target="_blank" rel="noreferrer" className="premium-btn" style={{ textDecoration: "none", fontSize: "0.9rem", padding: "0.7rem 1.5rem" }}>
                       Open App URL
                     </a>
+                    <button
+                      onClick={() => handleDeleteDeployment(d.id, d.subdomain)}
+                      style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "0.7rem 1rem", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}
+                    >
+                      🗑 Remove
+                    </button>
                   </div>
                 </div>
               ))}

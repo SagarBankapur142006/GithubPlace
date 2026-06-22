@@ -571,6 +571,20 @@ async def update_listing(
     await db.refresh(listing)
     return ListingDetail.model_validate(listing)
 
+@router.delete("/seller/listings/{listing_id}")
+async def delete_listing(
+    listing_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Listing).where(Listing.id == listing_id, Listing.seller_id == user.id))
+    listing = result.scalar_one_or_none()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found or access denied")
+    await db.delete(listing)
+    await db.commit()
+    return {"ok": True}
+
 @router.post("/transactions/{transaction_id}/deliver")
 async def mark_delivered(
     transaction_id: uuid.UUID,
@@ -909,6 +923,22 @@ async def get_deployment(
         "live_url": f"https://{deployment.subdomain}.ideora.app",
         "created_at": deployment.created_at.isoformat()
     }
+
+@router.delete("/deployments/{deployment_id}")
+async def delete_deployment(
+    deployment_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.deployment import Deployment
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id, Deployment.user_id == user.id))
+    deployment = result.scalar_one_or_none()
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    await db.delete(deployment)
+    await db.commit()
+    return {"ok": True}
+
 @router.get("/dashboard/purchases")
 async def get_purchases(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from sqlalchemy.orm import selectinload

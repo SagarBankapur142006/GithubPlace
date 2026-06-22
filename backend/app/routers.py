@@ -95,6 +95,7 @@ async def signin(body: SignInRequest, response: Response, db: AsyncSession = Dep
 async def github_auth(body: GithubAuthRequest, response: Response, db: AsyncSession = Depends(get_db)):
     import httpx
     import logging
+    from app.config import get_settings
     logger = logging.getLogger("ideora.auth.github")
 
     settings = get_settings()

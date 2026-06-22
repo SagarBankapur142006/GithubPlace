@@ -107,32 +107,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
     showLoader("Analyzing codebase using Gemini AI...");
 
+    let usedProduction = true;
     try {
-      const backendUrl = "http://localhost:8000/api/extension/evaluate";
-      const response = await fetch(backendUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          readme_text: textToEvaluate,
-          domain: domain
-        })
-      });
+      let response;
+      try {
+        response = await fetch("http://34.224.7.229/api/extension/evaluate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            readme_text: textToEvaluate,
+            domain: domain
+          })
+        });
+        if (!response.ok) throw new Error();
+      } catch {
+        usedProduction = false;
+        response = await fetch("http://localhost:8000/api/extension/evaluate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            readme_text: textToEvaluate,
+            domain: domain
+          })
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`API returned error status ${response.status}`);
       }
 
       const evalData = await response.json();
-      renderResults(evalData.pitch_deck, githubUrlValue);
+      renderResults(evalData.pitch_deck, githubUrlValue, usedProduction);
     } catch (err) {
       hide(loader);
-      showError("Could not connect to Ideora valuation backend. Make sure the API is running on localhost:8000.");
+      showError("Could not connect to Ideora valuation backend. Make sure the API is running.");
     }
   });
 
-  function renderResults(deck, githubUrl) {
+  function renderResults(deck, githubUrl, usedProd) {
     hide(loader);
     hide(contentArea);
 
@@ -160,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Configure listing button redirection
     btnList.onclick = () => {
-      let targetUrl = "http://localhost:3000/sell";
+      let targetUrl = usedProd ? "http://34.224.7.229/sell" : "http://localhost:3000/sell";
       if (githubUrl) {
         targetUrl += `?github_url=${encodeURIComponent(githubUrl)}`;
       }

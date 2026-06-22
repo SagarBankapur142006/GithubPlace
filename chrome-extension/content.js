@@ -487,8 +487,11 @@ function showValuationModal(initialText) {
   });
 
   // Redirect to Sell Page with prefilled URL if on github
+  let usedProduction = true;
+
+  // Redirect to Sell Page with prefilled URL if on github
   shadow.getElementById("ideora-list").addEventListener("click", () => {
-    let targetUrl = "http://localhost:3000/sell";
+    let targetUrl = usedProduction ? "http://34.224.7.229/sell" : "http://localhost:3000/sell";
     if (window.location.host.includes("github.com")) {
       targetUrl += `?github_url=${encodeURIComponent(window.location.href)}`;
     }
@@ -517,7 +520,8 @@ function showValuationModal(initialText) {
       </div>
     `;
 
-    fetch("http://localhost:8000/api/extension/evaluate", {
+    usedProduction = true;
+    fetch("http://34.224.7.229/api/extension/evaluate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -527,6 +531,19 @@ function showValuationModal(initialText) {
         domain: domain
       })
     })
+      .catch(() => {
+        usedProduction = false;
+        return fetch("http://localhost:8000/api/extension/evaluate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            readme_text: text,
+            domain: domain
+          })
+        });
+      })
       .then(res => {
         if (!res.ok) throw new Error("Server error " + res.status);
         return res.json();

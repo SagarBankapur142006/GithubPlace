@@ -10,6 +10,7 @@
   ],
   "host_permissions": [
     "http://localhost:8000/*",
+    "http://34.224.7.229/*",
     "https://api.github.com/*"
   ],
   "background": {
